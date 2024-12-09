@@ -1,0 +1,41 @@
+name: Deploy Flask API
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Log in to Azure Container Registry
+      - name: Log in to Azure
+        uses: azure/docker-login@v1
+        with:
+          login-server: <your_acr_name>.azurecr.io
+          username: ${{ secrets.AZURE_ACR_USERNAME }}
+          password: ${{ secrets.AZURE_ACR_PASSWORD }}
+
+      # Build and push the Docker image
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t <your_acr_name>.azurecr.io/flask-secure-api:latest .
+          docker push <your_acr_name>.azurecr.io/flask-secure-api:latest
+
+      # Deploy with Terraform
+      - name: Deploy Infrastructure
+        uses: hashicorp/terraform-github-actions@v3
+        with:
+          tf_version: 1.5.3
+          command: apply
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
